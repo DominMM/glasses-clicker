@@ -1,5 +1,5 @@
 // Offline cache for the glasses clicker. Version changes with every build.
-const CACHE = "glasses-clicker-d34a2bbc";
+const CACHE = "glasses-clicker-12ac8951";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
