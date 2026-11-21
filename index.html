@@ -286,7 +286,12 @@ ST.forEach((st, k) => {
 });
 pickStory(0);
 if (!navigator.bluetooth) setStatus("This browser can't use Bluetooth. Use Chrome on Android.", "bad");
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  // A newer build took over: load it at once, unless the glasses are connected (a reload would drop them).
+  const hadOne = !!navigator.serviceWorker.controller;   // false on the very first visit, nothing to reload then
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadOne && !linked) location.reload(); });
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>
