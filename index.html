@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.png">
+<title>Glasses Clicker</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #111; color: #eee; font: 16px/1.3 system-ui, sans-serif; display: flex; flex-direction: column;
+         padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); gap: 10px; user-select: none; touch-action: manipulation; }
+  header { display: flex; align-items: center; gap: 10px; }
+  #status { flex: 1; font-size: 15px; color: #aaa; }
+  #status.ok { color: #5fd38d; } #status.bad { color: #ff7a7a; }
+  button { font: inherit; color: #eee; background: #2a2a2a; border: 1px solid #444; border-radius: 12px; padding: 12px 14px; }
+  button:active { background: #3a3a3a; }
+  button:disabled { opacity: .4; }
+  canvas { width: 100%; background: #000; border-radius: 10px; border: 1px solid #333; display: block; }
+  #label { font-size: 18px; min-height: 1.3em; }
+  #upnext { font-size: 14px; color: #999; min-height: 1.3em; }
+  #thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+  #thumbs button { flex: 1 1 0; min-width: 44px; padding: 10px 0; }
+  #thumbs button.on { border-color: #00c8ff; color: #00c8ff; }
+  #next { flex: 1; min-height: 160px; font-size: 44px; font-weight: 700; letter-spacing: 2px; background: #0b3a4a; border-color: #00c8ff; border-radius: 20px; }
+  #next:active { background: #125a72; }
+  .row { display: flex; gap: 10px; }
+  .row button { flex: 1; padding: 16px 0; }
+  #help { font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+<header><span id="status">Not connected</span><button id="connect">Connect</button></header>
+<canvas id="cv" width="720" height="240"></canvas>
+<div id="label"></div>
+<div id="upnext"></div>
+<div id="thumbs"></div>
+<button id="next" disabled>NEXT</button>
+<div class="row"><button id="back" disabled>Back</button><button id="blank" disabled>Blank</button></div>
+<div id="help">Keep this page open and the phone unlocked while you use the glasses.</div>
+<script>
+"use strict";
+const SLIDES = [{"name": "Zgadnij co jadłem", "data": "AcACIAIgAACZwKogycAAAHAAiAC4AABAeCCjwHgAAeD6gIngcAAD4PogQcAgAPvgAKCJIPgAi+ACoBIgCADz4AEAAIABAAPgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAMj/AMj/AAAAAAAAAMj/AMj/AMj/AAAAAAAAAMj/AAAAAMj/AAAAAMj/AAAAAMj/AAAAAAAAAAAAAMj/AAAAAMj/AMj/AAAAAAAAAMj/AAAAAAAAAMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAMj/AMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAMj/AAAAAMj/AAAAAMj/AAAAAAAAAAAAAMj/AMj/AMj/AMj/AAAAAAAAAAAAAMj/AMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AMj/AAAAAMj/AMj/AMj/AMj/AMj/AAAAAMj/AAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAMj/AMj/AMj/AMj/AAAAAAAAAMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AMj/AMj/AAAAAMj/AMj/AMj/AMj/AMj/AAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AMj/AMj/AAAAAMj/AMj/AMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAMj/AAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAMj/AAAAAAAAAMj/AAAAAMj/AMj/AMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAMj/AAAAAMj/AMj/AMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAMj/AAAAAMj/AAAAAAAAAAAAAAAAAMj/AAAAAAAAAMj/AAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AMj/AAAAAAAAAMj/AMj/AMj/AMj/AMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMj/AMj/AMj/AMj/AMj/AAAA"}, {"name": "Twoją starą", "data": "AAAAAAAAAAAAAAAAAACAAPkggqACQPgAEgAj4BIA+AAB4HKAieBwAAPgEoAJYPAAAeB6gKHwfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBG/wBG/wBG/wBG/wBGAAAAAAAA/wBGAAAAAAAA/wBGAAAA/wBGAAAAAAAAAAAAAAAAAAAA/wBGAAAA/wBGAAAA/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBGAAAAAAAA/wBGAAAAAAAA/wBG/wBG/wBG/wBG/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBGAAAAAAAA/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBGAAAAAAAAAAAA/wBG/wBG/wBG/wBG/wBGAAAAAAAAAAAAAAAA/wBGAAAAAAAA/wBGAAAAAAAAAAAAAAAAAAAA/wBG/wBG/wBG/wBG/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBG/wBG/wBG/wBGAAAAAAAA/wBG/wBG/wBGAAAAAAAA/wBGAAAA/wBGAAAAAAAAAAAA/wBGAAAAAAAAAAAA/wBGAAAAAAAA/wBG/wBG/wBG/wBGAAAAAAAA/wBG/wBG/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBG/wBG/wBG/wBG/wBGAAAAAAAAAAAAAAAA/wBGAAAAAAAA/wBGAAAA/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBGAAAAAAAA/wBGAAAA/wBG/wBGAAAA/wBG/wBG/wBG/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wBG/wBG/wBG/wBGAAAAAAAA/wBG/wBG/wBG/wBGAAAA/wBGAAAA/wBGAAAAAAAAAAAA/wBGAAAA/wBGAAAAAAAAAAAAAAAA/wBG/wBG/wBG/wBG/wBGAAAA/wBG/wBG/wBG/wBG/wBGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}, {"name": "I wiesz co?", "data": "AAAAAAAAAACIAPgAiAAAAAAAAAAAAPgAEcAiIBIg+AABwIog+cCIAAIA+qCpAIgAAABIAKgAkAAAAJgAqADIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wA/9wA/9wA/9wA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wA/9wA/9wA/9wA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAAAAAA/9wA/9wA/9wAAAAAAAAAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAAAAAAAAAAAAAA/9wAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAA/9wA/9wA/9wA/9wA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wA/9wA/9wAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAA/9wAAAAAAAAAAAAA/9wAAAAA/9wA/9wA/9wA/9wA/9wAAAAAAAAA/9wA/9wA/9wAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAA/9wA/9wA/9wA/9wA/9wAAAAA/9wAAAAA/9wAAAAA/9wAAAAA/9wAAAAA/9wAAAAA/9wAAAAAAAAA/9wAAAAAAAAAAAAAAAAA/9wAAAAAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAA/9wAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAAAAAA/9wA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wAAAAA/9wAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9wA/9wAAAAAAAAA/9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}, {"name": "Gówno", "data": "AAAAAAAAB8AIIAkgCSAFwAAAB8AIICggSCAHwAAAD+AAQAGAAEAP4AAAD+AEAAIAAQAP4AAAB8AIIAggCCAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAA5mQAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAA5mQAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAA5mQAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAA5mQAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAA5mQAAAAAAAAAAAAAAAAAAAAAAAAA5mQA5mQA5mQA5mQA5mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}, {"name": "Performance", "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA8A8A0ADn8BgABMD7MIOQgmCEEIQQiACIEJAQkBCgEKAQwBDAEIAQgBD/8AAQABAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlpaWlpaWlpaWlpaWAAAAAAAAAAAAAAAA/5ZalpaWlpaWlpaWAAAAAAAAAAAAAAAA/5Za/5ZaAAAA/5ZaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/5Za/5Za/5ZaAAAAAAAAlpaWlpaWlpaWlpaWlpaWlpaWlpaWAAAAAAAAAAAA/5Za/5ZaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/5ZaAAAAAAAA/5Za/5ZaAAAAAAAAPFqWPFqWPFqWPFqWPFqWAAAAqgDI/5ZaAAAAAAAA/5ZaWlpaPFqWAAAAAAAAAAAAAAAAAAAAqgDI/5Za/5ZaAAAAAAAAWlpaPFqWAAAAAAAAAAAAAAAAAAAAqgDIAAAAAAAA/5Za/5ZaAAAAPFqWAAAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAAAAWlpaPFqWAAAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAAAAWlpaPFqWAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWAAAAAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWAAAAAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWAAAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqW////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqW////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWPFqWPFqWPFqWPFqWPFqWPFqWPFqWPFqWPFqWPFqWPFqWPFqWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPFqW"}];                      // [{name, data(base64 of 1368 bytes)}]
+const W = 36, H = 12, CHUNK = 98;
+const SVC = 0xfff0;
+const CH_CMD = "d44bc439-abfd-45a2-b575-925416129600";
+const CH_NOTIFY = "d44bc439-abfd-45a2-b575-925416129601";
+const CH_DATA = "d44bc439-abfd-45a2-b575-92541612960a";
+const hex = h => Uint8Array.from(h.match(/../g), b => parseInt(b, 16));
+const DATS = hex("cd047f35d26319c03b743533feb7979c"), DATCP = hex("e799ad01aa48ae0aee0b7203e8ede520");
+const BLANK = new Uint8Array(72 + W * H * 3);
+const frames = SLIDES.map(s => Uint8Array.from(atob(s.data), c => c.charCodeAt(0)));
+
+const $ = id => document.getElementById(id);
+let dev = null, chCmd = null, chData = null;
+let shown = -2;        // slide on the glasses (-1 = blank, -2 = unknown)
+let wanted = -1;       // slide the user asked for last
+let busy = false, linked = false, userLeft = false;
+let acks = 0, wake = null, lock = null;
+
+function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = cls || ""; }
+function enable(on) { for (const id of ["next", "back", "blank"]) $(id).disabled = !on; }
+
+function draw(i) {
+  const cv = $("cv"), g = cv.getContext("2d"), s = cv.width / W;
+  g.fillStyle = "#000"; g.fillRect(0, 0, cv.width, cv.height);
+  const f = i < 0 ? BLANK : frames[i];
+  for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
+    const o = 72 + (x * H + y) * 3, r = f[o], gg = f[o + 1], b = f[o + 2];
+    g.fillStyle = (r || gg || b) ? `rgb(${r},${gg},${b})` : "#161616";
+    g.beginPath(); g.arc((x + .5) * s, (y + .5) * s, s * .38, 0, 7); g.fill();
+  }
+  $("label").textContent = i < 0 ? "Blank" : `${i + 1}. ${SLIDES[i].name}`;
+  const n = nextIndex(i);
+  $("upnext").textContent = "NEXT shows: " + (n < 0 ? "blank" : `${n + 1}. ${SLIDES[n].name}`);
+  document.querySelectorAll("#thumbs button").forEach((b, k) => b.classList.toggle("on", k === i));
+}
+function nextIndex(i) { return i >= frames.length - 1 ? -1 : i + 1; }
+function prevIndex(i) { return i < 0 ? frames.length - 1 : i - 1; }
+
+function onNotify() { acks++; if (wake) { const w = wake; wake = null; w(); } }
+function ack(ms = 3000) {
+  return new Promise((res, rej) => {
+    if (acks > 0) { acks--; return res(); }
+    const t = setTimeout(() => { wake = null; rej(new Error("glasses did not answer")); }, ms);
+    wake = () => { clearTimeout(t); acks--; res(); };
+  });
+}
+async function upload(bytes) {
+  acks = 0;
+  await chCmd.writeValueWithResponse(DATS); await ack();
+  for (let off = 0, n = 0; off < bytes.length; off += CHUNK, n++) {
+    const part = bytes.subarray(off, off + CHUNK), pkt = new Uint8Array(part.length + 2);
+    pkt[0] = part.length + 1; pkt[1] = n & 255; pkt.set(part, 2);
+    await chData.writeValueWithoutResponse(pkt); await ack();
+  }
+  await chCmd.writeValueWithResponse(DATCP); await ack();
+}
+async function show(i) {
+  wanted = i; draw(i);
+  if (busy || !linked) return;
+  busy = true;
+  try {
+    while (shown !== wanted) {
+      const target = wanted;
+      let lastErr = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try { await upload(target < 0 ? BLANK : frames[target]); lastErr = null; break; }
+        catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 250)); }
+      }
+      if (lastErr) throw lastErr;
+      shown = target;
+      if (navigator.vibrate) navigator.vibrate(25);
+    }
+    setStatus("Connected", "ok");
+  } catch (e) {
+    setStatus("Send failed: " + e.message, "bad");
+  } finally { busy = false; }
+}
+
+async function link() {
+  const gatt = await dev.gatt.connect();
+  const svc = await gatt.getPrimaryService(SVC);
+  chCmd = await svc.getCharacteristic(CH_CMD);
+  chData = await svc.getCharacteristic(CH_DATA);
+  const n = await svc.getCharacteristic(CH_NOTIFY);
+  n.addEventListener("characteristicvaluechanged", onNotify);
+  await n.startNotifications();
+  linked = true; enable(true); setStatus("Connected to " + (dev.name || "glasses"), "ok");
+}
+async function onDisconnected() {
+  linked = false; busy = false; shown = -2;      // unknown: resend on reconnect
+  if (userLeft) return;
+  for (let i = 1; i <= 20 && !linked; i++) {
+    setStatus(`Connection lost, retrying (${i})...`, "bad");
+    try { await link(); if (wanted !== -2) show(wanted); return; }
+    catch (e) { await new Promise(r => setTimeout(r, 1500)); }
+  }
+  if (!linked) { enable(false); setStatus("Disconnected. Tap Connect.", "bad"); }
+}
+async function connect() {
+  if (!navigator.bluetooth) { setStatus("This browser can't use Bluetooth. Use Chrome on Android.", "bad"); return; }
+  try {
+    setStatus("Choose GLASSES in the list...");
+    dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: "GLASSES" }], optionalServices: [SVC] });
+    dev.addEventListener("gattserverdisconnected", onDisconnected);
+    setStatus("Connecting...");
+    await link();
+    keepAwake();
+  } catch (e) { setStatus(e.name === "NotFoundError" ? "Not connected" : "Could not connect: " + e.message, "bad"); }
+}
+async function keepAwake() {
+  try { if ("wakeLock" in navigator && document.visibilityState === "visible") lock = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (linked) keepAwake(); });
+
+$("connect").onclick = connect;
+$("next").onclick = () => show(nextIndex(wanted));
+$("back").onclick = () => show(prevIndex(wanted));
+$("blank").onclick = () => show(-1);
+SLIDES.forEach((s, i) => {
+  const b = document.createElement("button"); b.textContent = i + 1; b.title = s.name;
+  b.onclick = () => show(i); $("thumbs").appendChild(b);
+});
+draw(-1);
+if (!navigator.bluetooth) setStatus("This browser can't use Bluetooth. Use Chrome on Android.", "bad");
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
