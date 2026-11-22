@@ -1,7 +1,7 @@
 // Offline cache for the glasses clicker. Version changes with every build.
 // Every request asks the server whether its copy is still current ("no-cache"): GitHub Pages lets
 // browsers reuse a page for 10 minutes, and without this a fresh build stayed invisible that long.
-const CACHE = "glasses-clicker-98b4b8e7";
+const CACHE = "glasses-clicker-d33ce2bc";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "no-cache" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
